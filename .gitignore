@@ -1,0 +1,26 @@
+# Local TideCloak server binaries and its H2 database (realm keys, users, sessions)
+tidecloak-local/
+# Secrets: never commit
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.local
+**/.env.*.local
+# Tide adapter config exported from the local realm (contains realm/vendor ids)
+**/data/tidecloak.json
+# App runtime store (ciphertext + metadata from local testing)
+**/data/store*.json
+# Node / Next
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+npm-debug.log*
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+
+# init script marker
+safesignal/init/.realm_name
