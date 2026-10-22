@@ -3,5 +3,4 @@
 * text=auto eol=lf
 safesignal/public/tide_dpop_auth.html -text
 *.png binary
-*.mp4 binary
 *.mp4 filter=lfs diff=lfs merge=lfs -text
