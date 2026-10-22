@@ -1,10 +1,11 @@
-# Runs the official tideorg/tidecloak-dev:latest distribution (TideCloak 0.14.41, Keycloak 26.7.5)
-# directly on the host JVM, for machines without Docker.
+# Native Windows launcher for the official tideorg/tidecloak-dev:latest distribution
+# (TideCloak 0.14.41, Keycloak 26.7.5), extracted unmodified from the image layers by
+# scripts/fetch-tidecloak-image.sh. It reproduces the image ENTRYPOINT and the ENV baked into the
+# image config (production Tide network, 14-of-20); it invents no ORK/threshold settings.
 #
-# The server files in tidecloak-local/server were extracted unmodified from the image's layers
-# (see scripts/fetch-tidecloak-image.sh). This script reproduces the image's ENTRYPOINT and the
-# ENV values baked into the image config. It does NOT invent ORK/threshold settings: these are the
-# image defaults, copied verbatim from its config blob (production Tide network, 14-of-20).
+# LIMITATION (observed 2026-10-22): the server starts, but Tide realm licensing fails with
+# UnsatisfiedLinkError 'initialize_wallet'. The Windows MidgardCore.dll inside the image exports
+# only 4 functions. For anything needing Tide cryptography use scripts/tide-vm/up.sh (Linux VM).
 #
 # Usage (PowerShell):   ./scripts/start-tidecloak.ps1
 # Admin credentials are read from .env.tidecloak (gitignored), never hardcoded here.

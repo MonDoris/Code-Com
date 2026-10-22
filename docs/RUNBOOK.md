@@ -6,12 +6,16 @@ Do the steps in this order. Steps 3 to 5 must happen while there is still only *
 Accounts needed (each is a separate Tide account, enrolled in the browser): `admin1`, `admin2`, `admin3`, `lan` (reporter), `reviewer-b`.
 Use a separate browser profile or private window per account.
 
-## 0. Start TideCloak (if not already running)
+## 0. Start TideCloak on Linux (VMware Player VM; no Docker or admin rights needed)
 
-```powershell
-./scripts/start-tidecloak.ps1      # runs tideorg/tidecloak-dev 0.14.41 natively; no Docker needed
+Tide cryptography needs the image's Linux native core: on a Windows JVM, realm licensing fails
+(`UnsatisfiedLinkError: initialize_wallet`). In Git Bash from the repo root:
+```bash
+bash scripts/tide-vm/up.sh          # boots the VM (192.168.148.50) and starts TideCloak from the image's own layers
+node scripts/tide-vm/relay.mjs      # keep running: forwards localhost:8080 to the VM
 ```
 Check: `curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/` prints `302`.
+If you have Docker on another machine, the official `docker run ... tideorg/tidecloak-dev:latest` is equivalent.
 
 ## 1. Provision the realm and enroll admin1 (HUMAN, about 5 min)
 
@@ -19,6 +23,11 @@ Read https://tide.org/legal first. In Git Bash from the repo root:
 ```bash
 SUBSCRIPTION_EMAIL=you@example.com ACCEPT_TIDE_TERMS=yes bash scripts/init-realm.sh
 ```
+Known blocker (2026-10-22, 14:09 ICT): three attempts with the same email failed inside Tide's
+licensing service. The first timed out in `InitializeWallet`; the next two got HTTP 500 from
+`FinalizeWallet` and surfaced as `TIDE-IDPEXT-VENDOR-KEYGEN_FAILED`. Before each retry, delete the
+half-made realm (`DELETE /admin/realms/safesignal` with a master admin token). If it keeps failing,
+try a different license email or ask Tide support (info@tide.org, Discord https://discord.gg/XBMd9ny2q5).
 When it prints `ACTION REQUIRED`, open the link, create a Tide account for **admin1**, and leave the script running. It finishes by itself and writes `safesignal/tidecloak.json` (local config; do not commit it).
 
 ## 2. Gate 2: login / logout (HUMAN)
