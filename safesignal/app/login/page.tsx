@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DEMO_ACCOUNTS, DEMO_PASSWORD, DemoProvider, ROLES, useDemo } from "@/lib/demo/store";
 import { Icon, ICONS } from "@/lib/demo/icons";
+import { SIM_REALM } from "@/lib/demo/tidecloak-sim";
 
 export default function LoginPage() {
   return (
@@ -24,9 +25,13 @@ function LoginForm() {
     if (ready && session) router.replace("/dashboard");
   }, [ready, session, router]);
 
-  const onSubmit = (e: FormEvent) => {
+  const [busy, setBusy] = useState(false);
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (login(email, password)) router.push("/dashboard");
+    setBusy(true);
+    const ok = await login(email, password);
+    setBusy(false);
+    if (ok) router.push("/dashboard");
     else setError("Email hoặc mật khẩu không đúng.");
   };
 
@@ -39,7 +44,7 @@ function LoginForm() {
       <aside className="auth-aside reveal">
         <Link href="/" className="brand"><span className="brand-dot" />Code Cơm</Link>
         <div>
-          <p className="eyebrow">SafeSignal Escalate</p>
+          <p className="eyebrow">Báo cáo sự cố y khoa</p>
           <h1>Chào mừng trở lại.</h1>
           <p className="lede">Đăng nhập để gửi báo cáo sự cố hoặc thẩm định các hồ sơ được chuyển tới bạn.</p>
         </div>
@@ -53,8 +58,11 @@ function LoginForm() {
       <main className="auth-main">
         <form className="card auth-card reveal d1" onSubmit={onSubmit}>
           <div className="panel-head">
-            <h2>Đăng nhập</h2>
-            <span className="chip demo">Demo</span>
+            <div>
+              <p className="eyebrow">TideCloak · realm {SIM_REALM}</p>
+              <h2>Đăng nhập bằng Tide</h2>
+            </div>
+            <span className="chip demo">Mô phỏng</span>
           </div>
           <label className="field">
             <span>Email</span>
@@ -65,7 +73,11 @@ function LoginForm() {
             <input type="password" autoComplete="current-password" value={password} onChange={(e) => { setPassword(e.target.value); setError(""); }} placeholder="••••••••" required />
           </label>
           {error && <p className="bad" role="alert">{error}</p>}
-          <button type="submit" className="auth-submit">Đăng nhập <Icon d={ICONS.arrow} /></button>
+          <button type="submit" className="auth-submit" disabled={busy}>{busy ? "Đang xác thực…" : "Đăng nhập bằng Tide"} <Icon d={ICONS.arrow} /></button>
+          <p className="muted form-note">
+            Bản mô phỏng TideCloak: sau khi đăng nhập, realm cấp một access token có chữ ký (ES256) mang các vai trò của realm;
+            mọi kiểm tra quyền trong ứng dụng đều xác minh token này.
+          </p>
 
           <div className="demo-accounts">
             <p className="muted">Tài khoản demo · mật khẩu <code>{DEMO_PASSWORD}</code></p>

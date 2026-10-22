@@ -42,9 +42,21 @@ function ReportView({ id, report }: { id: string; report: Report }) {
 }
 
 export default function ReviewPage() {
-  const { role, cases, open, markReviewed, loadSamples, reset } = useDemo();
+  const { role, can, cases, open, markReviewed, loadSamples, reset, restore, canOpen } = useDemo();
   const [filter, setFilter] = useState<Filter>("ALL");
   const [opened, setOpened] = useState<{ id: string; report?: Report; error?: string } | null>(null);
+  const [receipt, setReceipt] = useState("");
+  const [restoreMsg, setRestoreMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const onRestore = () => {
+    const r = restore(receipt);
+    setRestoreMsg(
+      r === "added" ? { ok: true, text: "Đã khôi phục hồ sơ từ bản sao mã hóa." }
+        : r === "exists" ? { ok: false, text: "Hồ sơ này vẫn còn trong hệ thống, không cần khôi phục." }
+          : { ok: false, text: "Bản sao không hợp lệ." },
+    );
+    if (r === "added") setReceipt("");
+  };
 
   const view = async (c: Case) => {
     try {
@@ -54,20 +66,49 @@ export default function ReviewPage() {
     }
   };
 
-  if (role !== "reviewer") {
+  if (!can("review")) {
+    const granted = cases.filter((c) => canOpen(c.id));
     return (
-      <section className="card locked-card denied-card reveal">
-        <span className="role-icon"><Icon d={ICONS.ban} /></span>
-        <div>
-          <h2>Từ chối truy cập</h2>
-          <p className="muted">
-            {role === "reporter"
-              ? "Người báo cáo chỉ gửi được báo cáo, không xem được danh sách hay nội dung đã gửi."
-              : "Bạn không có vai trò người thẩm định độc lập."}{" "}
-            Vai trò thẩm định chỉ được cấp khi nhóm quản trị cùng phê duyệt.
-          </p>
-        </div>
-      </section>
+      <>
+        <section className="card locked-card denied-card reveal">
+          <span className="role-icon"><Icon d={ICONS.ban} /></span>
+          <div>
+            <h2>Từ chối truy cập</h2>
+            <p className="muted">
+              {role === "reporter"
+                ? "Người báo cáo chỉ gửi được báo cáo, không xem được danh sách hay nội dung đã gửi."
+                : "Bạn không có vai trò người thẩm định độc lập."}{" "}
+              Quyền xem chỉ được cấp khi 3 quản trị viên cùng ký phê duyệt.
+            </p>
+          </div>
+        </section>
+        {granted.length > 0 && (
+          <section className="card reveal d1">
+            <div className="panel-head">
+              <h2>Hồ sơ được cấp quyền xem</h2>
+              <span className="chip demo">Đã đủ 3 chữ ký quản trị</span>
+            </div>
+            <table>
+              <thead><tr><th>Mã hồ sơ</th><th>Thời điểm nhận</th><th></th></tr></thead>
+              <tbody>
+                {granted.map((c) => (
+                  <tr key={c.id}>
+                    <td className="mono">{c.id}</td>
+                    <td>{new Date(c.createdAt).toLocaleString("vi-VN")}</td>
+                    <td className="row actions"><button onClick={() => view(c)}><Icon d={ICONS.eye} />Xem báo cáo</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        )}
+        {opened && granted.some((c) => c.id === opened.id) && (
+          <section className="card report-view reveal">
+            {opened.report ? <ReportView id={opened.id} report={opened.report} /> : <p className="bad">Không mở được báo cáo: {opened.error}</p>}
+            <div className="row form-actions"><button className="secondary" onClick={() => setOpened(null)}>Đóng</button></div>
+          </section>
+        )}
+      </>
     );
   }
 
@@ -118,6 +159,18 @@ export default function ReviewPage() {
           </div>
         </section>
       )}
+
+      <section className="card reveal">
+        <div className="panel-head">
+          <h2>Khôi phục hồ sơ từ bản sao mã hóa</h2>
+        </div>
+        <p className="muted">Dán bản sao mã hóa mà người báo cáo nhận được sau khi gửi, khi hồ sơ bị mất hoặc bị xóa khỏi hệ thống.</p>
+        <textarea className="mono short" value={receipt} onChange={(e) => { setReceipt(e.target.value); setRestoreMsg(null); }} placeholder="CODECOM-BANSAO-1.…" />
+        <div className="row">
+          <button onClick={onRestore} disabled={!receipt.trim()}>Khôi phục</button>
+          {restoreMsg && <span className={restoreMsg.ok ? "ok" : "bad"}>{restoreMsg.text}</span>}
+        </div>
+      </section>
 
       <p className="row reset-row">
         <button className="secondary" onClick={loadSamples}>Nạp dữ liệu mẫu</button>

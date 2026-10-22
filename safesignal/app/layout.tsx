@@ -14,7 +14,7 @@ const mono = JetBrains_Mono({ subsets: ['latin', 'vietnamese'], variable: '--fon
 const configured = Boolean((tcConfig as Record<string, unknown>).realm)
 
 export const metadata: Metadata = {
-  title: 'SafeSignal Escalate',
+  title: 'Code Cơm',
   description: 'Báo cáo sự cố suýt xảy ra (dữ liệu giả lập), mã hóa đầu-cuối với TideCloak và quyền thẩm định do nhóm quản trị phê duyệt',
 }
 

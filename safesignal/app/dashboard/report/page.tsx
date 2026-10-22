@@ -1,11 +1,11 @@
 "use client";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { CATEGORIES, DEPARTMENTS, EMPTY_REPORT, OUTCOMES, SEVERITIES, syntheticExample, useDemo, type Case, type Report } from "@/lib/demo/store";
+import { CATEGORIES, DEPARTMENTS, EMPTY_REPORT, OUTCOMES, SEVERITIES, receiptOf, syntheticExample, useDemo, type Case, type Report } from "@/lib/demo/store";
 import { Icon, ICONS } from "@/lib/demo/icons";
 
 export default function ReportPage() {
-  const { role, logout, submit } = useDemo();
+  const { can, logout, submit } = useDemo();
   const router = useRouter();
   const [form, setForm] = useState<Report>(EMPTY_REPORT);
   const [busy, setBusy] = useState(false);
@@ -27,7 +27,7 @@ export default function ReportPage() {
     }
   };
 
-  if (role !== "reporter") {
+  if (!can("submit")) {
     return (
       <section className="card locked-card reveal">
         <span className="role-icon"><Icon d={ICONS.lock} /></span>
@@ -41,6 +41,13 @@ export default function ReportPage() {
   }
 
   if (sent) {
+    const receipt = receiptOf(sent);
+    const download = () => {
+      const url = URL.createObjectURL(new Blob([receipt], { type: "text/plain" }));
+      const a = Object.assign(document.createElement("a"), { href: url, download: `${sent.id}-ban-sao-ma-hoa.txt` });
+      a.click();
+      URL.revokeObjectURL(url);
+    };
     return (
       <section className="card sent-card reveal">
         <span className="role-icon ok-icon"><Icon d={ICONS.check} /></span>
@@ -50,7 +57,21 @@ export default function ReportPage() {
           Báo cáo đã được chuyển tới người thẩm định độc lập. Nội dung được bảo mật: chỉ người thẩm định đọc được, kể cả bạn
           cũng không xem lại được sau khi gửi.
         </p>
-        <button onClick={() => setSent(null)}>Gửi báo cáo khác</button>
+        <div className="receipt">
+          <div className="panel-head">
+            <h3><Icon d={ICONS.lock} /> Bản sao mã hóa của báo cáo</h3>
+          </div>
+          <p className="muted">
+            Hãy lưu lại bản sao này. Nếu hệ thống gặp sự cố hoặc hồ sơ bị xóa, người thẩm định dùng nó để khôi phục đúng báo
+            cáo của bạn. Bản sao đã được mã hóa: không ai đọc được nội dung nếu không có khóa của người thẩm định.
+          </p>
+          <textarea className="mono receipt-text" readOnly value={receipt} onFocus={(e) => e.currentTarget.select()} />
+          <div className="row">
+            <button onClick={download}>Tải bản sao (.txt)</button>
+            <button className="secondary" onClick={() => navigator.clipboard?.writeText(receipt)}>Sao chép</button>
+          </div>
+        </div>
+        <button className="secondary" onClick={() => setSent(null)}>Gửi báo cáo khác</button>
       </section>
     );
   }

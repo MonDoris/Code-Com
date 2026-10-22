@@ -9,6 +9,7 @@ const NAV = [
   { href: "/dashboard", label: "Tổng quan", icon: ICONS.grid },
   { href: "/dashboard/report", label: "Gửi báo cáo", icon: ICONS.pen },
   { href: "/dashboard/review", label: "Thẩm định", icon: ICONS.eye },
+  { href: "/dashboard/admin", label: "Quản trị", icon: ICONS.shield },
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {

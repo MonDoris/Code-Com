@@ -5,8 +5,10 @@
 // browser (WebCrypto RSA-OAEP + AES-GCM) stands in for Tide threshold encryption. Not secure: the
 // password check runs in the browser and the reviewer's private key sits in this browser's storage.
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { QUORUM, signApproval, verifiedApprovers, type GrantRequest } from "./tide-sim";
+import { authorize, issueToken, roleFromClaims, verifyToken, type Action, type Claims } from "./tidecloak-sim";
 
-export type Role = "reporter" | "reviewer" | "staff";
+export type Role = "reporter" | "reviewer" | "staff" | "admin";
 export type CaseStatus = "REFERRED" | "REVIEWED";
 export type Case = { id: string; createdAt: string; status: CaseStatus; ciphertext: string };
 
@@ -14,6 +16,7 @@ export const ROLES: Record<Role, { label: string; short: string; cap: string; in
   reporter: { label: "Người báo cáo", short: "Người báo cáo", cap: "Gửi báo cáo sự cố. Không xem lại được.", initials: "BC" },
   reviewer: { label: "Người thẩm định độc lập", short: "Người thẩm định", cap: "Xem và xử lý các báo cáo được chuyển tới.", initials: "TĐ" },
   staff: { label: "Nhân viên khác", short: "Nhân viên", cap: "Không có vai trò. Không xem được báo cáo.", initials: "NV" },
+  admin: { label: "Quản trị viên", short: "Quản trị viên", cap: `Tạo và ký phê duyệt cấp quyền (cần ${QUORUM} người).`, initials: "QT" },
 };
 export const STATUS_LABELS: Record<CaseStatus, string> = { REFERRED: "Chờ thẩm định", REVIEWED: "Đã xem xét" };
 
@@ -22,8 +25,13 @@ export const DEMO_ACCOUNTS: { email: string; role: Role }[] = [
   { email: "baocao@codecom.demo", role: "reporter" },
   { email: "thamdinh@codecom.demo", role: "reviewer" },
   { email: "nhanvien@codecom.demo", role: "staff" },
+  { email: "quantri1@codecom.demo", role: "admin" },
+  { email: "quantri2@codecom.demo", role: "admin" },
+  { email: "quantri3@codecom.demo", role: "admin" },
+  { email: "quantri4@codecom.demo", role: "admin" },
 ];
-export type Session = { email: string; role: Role };
+/** A signed-in session holds the (simulated) TideCloak access token, never a bare role. */
+export type Session = { email: string; token: string };
 
 /** The incident report form. The whole object is what gets encrypted; the list only shows id, time, status. */
 export type Report = {
@@ -65,6 +73,8 @@ export const EMPTY_REPORT: Report = {
 };
 
 // K_CASES is versioned: a browser that never stored this key gets the sample referrals once.
+const K_GRANTS = "ss-demo-grants";
+const RECEIPT_PREFIX = "CODECOM-BANSAO-1.";
 const K_SESSION = "ss-demo-session", K_CASES = "ss-demo-cases-v3", K_PUB = "ss-demo-reviewer-pub", K_PRIV = "ss-demo-reviewer-priv";
 const RSA = { name: "RSA-OAEP", hash: "SHA-256" };
 
@@ -212,12 +222,39 @@ async function sampleCases(): Promise<Case[]> {
 
 const byCreatedAt = (a: Case, b: Case) => a.createdAt.localeCompare(b.createdAt);
 
+/**
+ * The reporter's encrypted copy of a submitted report: id, time and the same ciphertext the store
+ * holds. It cannot be read without the reviewer key; it only lets a reviewer restore a lost record.
+ */
+export function receiptOf(c: Case): string {
+  return RECEIPT_PREFIX + btoa(JSON.stringify({ id: c.id, createdAt: c.createdAt, ciphertext: c.ciphertext }));
+}
+
+function parseReceipt(text: string): Case | null {
+  try {
+    const t = text.trim();
+    if (!t.startsWith(RECEIPT_PREFIX)) return null;
+    const r = JSON.parse(atob(t.slice(RECEIPT_PREFIX.length))) as Partial<Case>;
+    if (typeof r.id !== "string" || typeof r.createdAt !== "string" || typeof r.ciphertext !== "string") return null;
+    return { id: r.id, createdAt: r.createdAt, ciphertext: r.ciphertext, status: "REFERRED" };
+  } catch {
+    return null;
+  }
+}
+
+export type { GrantRequest } from "./tide-sim";
+export { QUORUM } from "./tide-sim";
+
 interface DemoState {
   ready: boolean;
   session: Session | null;
-  /** The signed-in account's role; "staff" (no rights) when nobody is signed in. */
+  /** Claims of the verified access token; null when signed out or the token failed verification. */
+  claims: Claims | null;
+  /** Label role derived from the verified token; "staff" (no rights) when nobody is signed in. */
   role: Role;
-  login: (email: string, password: string) => boolean;
+  /** Every access decision goes through here (tidecloak-sim authorize). */
+  can: (action: Action) => boolean;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   cases: Case[];
   submit: (report: Report) => Promise<Case>;
@@ -225,6 +262,15 @@ interface DemoState {
   markReviewed: (id: string) => void;
   loadSamples: () => Promise<void>;
   reset: () => void;
+  /** Restore a record from a reporter's encrypted copy. */
+  restore: (receipt: string) => "added" | "exists" | "invalid";
+  grants: GrantRequest[];
+  /** Verified approvers per grant id (signature checked, requester and duplicates excluded). */
+  approvers: Record<string, string[]>;
+  requestGrant: (caseId: string, grantee: string) => void;
+  approveGrant: (id: string) => Promise<void>;
+  /** Reviewers open everything; anyone else only cases with a quorum-approved grant to them. */
+  canOpen: (caseId: string) => boolean;
 }
 
 const DemoContext = createContext<DemoState | null>(null);
@@ -234,29 +280,62 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [cases, setCases] = useState<Case[]>([]);
 
-  const login = useCallback((email: string, password: string) => {
-    const account = DEMO_ACCOUNTS.find((a) => a.email === email.trim().toLowerCase());
-    if (!account || password !== DEMO_PASSWORD) return false;
-    setSession(account); save(K_SESSION, account);
+  const [claims, setClaims] = useState<Claims | null>(null);
+
+  const startSession = useCallback(async (email: string, role: Role) => {
+    const token = await issueToken(email, role);
+    const verified = await verifyToken(token);
+    if (!verified) return false;
+    const s = { email, token };
+    setSession(s); setClaims(verified.claims); save(K_SESSION, s);
     return true;
   }, []);
+
+  const login = useCallback(async (email: string, password: string) => {
+    const account = DEMO_ACCOUNTS.find((a) => a.email === email.trim().toLowerCase());
+    if (!account || password !== DEMO_PASSWORD) return false;
+    return startSession(account.email, account.role);
+  }, [startSession]);
   const logout = useCallback(() => {
-    setSession(null);
+    setSession(null); setClaims(null);
     try { localStorage.removeItem(K_SESSION); } catch { /* storage blocked */ }
   }, []);
+
+  // Simulates the SDK's silent token refresh shortly before the 10-minute access token expires.
+  useEffect(() => {
+    if (!session || !claims) return;
+    const t = setInterval(() => {
+      const account = DEMO_ACCOUNTS.find((a) => a.email === session.email);
+      if (account && claims.exp * 1000 - Date.now() < 120_000) void startSession(account.email, account.role);
+    }, 30_000);
+    return () => clearInterval(t);
+  }, [session, claims, startSession]);
 
   const persist = useCallback((update: (prev: Case[]) => Case[]) => {
     setCases((prev) => { const next = update(prev); save(K_CASES, next); return next; });
   }, []);
 
   useEffect(() => {
-    setSession(load<Session | null>(K_SESSION, null));
     const stored = load<Case[] | null>(K_CASES, null);
     setCases(stored ?? []);
-    setReady(true);
     // First visit: seed the sample referrals. "Reset" stores [], so it never re-seeds by itself.
     if (stored === null) sampleCases().then((seed) => persist((prev) => (prev.length ? prev : seed)));
-  }, [persist]);
+
+    // Restore the session only if its token still verifies; an expired one is silently refreshed.
+    (async () => {
+      const s = load<Partial<Session> | null>(K_SESSION, null);
+      const account = DEMO_ACCOUNTS.find((a) => a.email === s?.email);
+      const verified = s?.token ? await verifyToken(s.token) : null;
+      if (account && verified && !verified.expired) {
+        setSession({ email: account.email, token: s!.token! }); setClaims(verified.claims);
+      } else if (account && verified?.expired) {
+        await startSession(account.email, account.role);
+      } else {
+        try { localStorage.removeItem(K_SESSION); } catch { /* storage blocked */ }
+      }
+      setReady(true);
+    })();
+  }, [persist, startSession]);
 
   const submit = useCallback(async (report: Report) => {
     const { pub } = await reviewerKeys();
@@ -278,10 +357,60 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   }, [persist]);
   const reset = useCallback(() => persist(() => []), [persist]);
 
-  const role: Role = session?.role ?? "staff";
+  const restore = useCallback((receipt: string) => {
+    const c = parseReceipt(receipt);
+    if (!c) return "invalid" as const;
+    if (cases.some((x) => x.id === c.id)) return "exists" as const;
+    persist((prev) => [...prev, c].sort(byCreatedAt));
+    return "added" as const;
+  }, [cases, persist]);
+
+  // Tide simulation: access-grant requests and their verified approvals.
+  const [grants, setGrants] = useState<GrantRequest[]>([]);
+  const [approvers, setApprovers] = useState<Record<string, string[]>>({});
+  useEffect(() => { setGrants(load<GrantRequest[]>(K_GRANTS, [])); }, []);
+  useEffect(() => {
+    let live = true;
+    Promise.all(grants.map(async (g) => [g.id, await verifiedApprovers(g)] as const)).then((entries) => {
+      if (live) setApprovers(Object.fromEntries(entries));
+    });
+    return () => { live = false; };
+  }, [grants]);
+  const persistGrants = useCallback((update: (prev: GrantRequest[]) => GrantRequest[]) => {
+    setGrants((prev) => { const next = update(prev); save(K_GRANTS, next); return next; });
+  }, []);
+
+  const can = useCallback((action: Action) => authorize(claims, action), [claims]);
+
+  const requestGrant = useCallback((caseId: string, grantee: string) => {
+    if (!session || !can("approve")) return;
+    const g: GrantRequest = {
+      id: `YC-${crypto.randomUUID().slice(0, 6).toUpperCase()}`,
+      caseId,
+      grantee,
+      requestedBy: session.email,
+      createdAt: new Date().toISOString(),
+      approvals: [],
+    };
+    persistGrants((prev) => [...prev, g]);
+  }, [session, can, persistGrants]);
+
+  const approveGrant = useCallback(async (id: string) => {
+    const g = grants.find((x) => x.id === id);
+    if (!g || !session || !can("approve") || g.requestedBy === session.email || g.approvals.some((a) => a.admin === session.email)) return;
+    const approval = await signApproval(g, session.email);
+    persistGrants((prev) => prev.map((x) => (x.id === id ? { ...x, approvals: [...x.approvals, approval] } : x)));
+  }, [grants, session, can, persistGrants]);
+
+  const role: Role = claims ? roleFromClaims(claims) : "staff";
+  const canOpen = useCallback((caseId: string) => {
+    if (can("review")) return true;
+    return !!claims && grants.some((g) => g.caseId === caseId && g.grantee === claims.email && (approvers[g.id]?.length ?? 0) >= QUORUM);
+  }, [can, claims, grants, approvers]);
+
   const value = useMemo(
-    () => ({ ready, session, role, login, logout, cases, submit, open, markReviewed, loadSamples, reset }),
-    [ready, session, role, login, logout, cases, submit, open, markReviewed, loadSamples, reset],
+    () => ({ ready, session, claims, role, can, login, logout, cases, submit, open, markReviewed, loadSamples, reset, restore, grants, approvers, requestGrant, approveGrant, canOpen }),
+    [ready, session, claims, role, can, login, logout, cases, submit, open, markReviewed, loadSamples, reset, restore, grants, approvers, requestGrant, approveGrant, canOpen],
   );
   return <DemoContext.Provider value={value}>{children}</DemoContext.Provider>;
 }

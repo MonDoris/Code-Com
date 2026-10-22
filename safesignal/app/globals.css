@@ -574,6 +574,27 @@ input[type="datetime-local"] { color-scheme: dark; }
 .report-meta dt { font-size: 0.75rem; color: var(--muted); }
 .report-meta dd { margin: 2px 0 0; font-weight: 600; }
 
+/* Reporter's encrypted copy */
+.receipt { width: 100%; text-align: left; margin: 10px 0 6px; padding: 18px; border: 1px dashed rgba(79, 216, 198, 0.45); border-radius: 14px; background: rgba(79, 216, 198, 0.05); display: grid; gap: 10px; }
+.receipt h3 { display: inline-flex; align-items: center; gap: 8px; margin: 0; color: var(--teal); }
+.receipt p { margin: 0; }
+textarea.receipt-text { min-height: 84px; margin: 0; color: rgba(79, 216, 198, 0.9); }
+
+/* Tide simulation: quorum approvals */
+.tide-card { border-color: rgba(79, 216, 198, 0.35); background: radial-gradient(520px 200px at 100% 0%, rgba(79, 216, 198, 0.12), transparent 70%), var(--card); }
+.requests { display: grid; gap: 12px; }
+.request { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: rgba(5, 14, 16, 0.55); }
+.request.active { border-color: rgba(38, 165, 150, 0.6); }
+.request-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.quorum { display: flex; gap: 6px; }
+.quorum .dot { flex: 1; height: 8px; border-radius: 4px; background: rgba(150, 200, 195, 0.12); transition: background 0.3s ease; }
+.quorum .dot.on { background: #26a596; }
+.signers { list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; flex-wrap: wrap; }
+.signers li { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--muted); font-size: 0.82rem; }
+.signers li.signed { border-color: rgba(38, 165, 150, 0.6); color: var(--ink); }
+.signers li.signed svg { color: var(--ok); }
+.sig { font-size: 0.7rem; color: var(--teal); }
+
 @media (max-width: 900px) {
   .form-grid { grid-template-columns: 1fr; }
   .auth { grid-template-columns: 1fr; }

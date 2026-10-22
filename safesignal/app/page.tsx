@@ -58,7 +58,7 @@ export default function LandingPage() {
             Lên tiếng về sự cố suýt xảy ra, <span className="accent">an toàn</span>.
           </h1>
           <p className="lede">
-            SafeSignal giúp nhân viên y tế chuyển báo cáo sự cố tới người thẩm định độc lập. Nội dung được niêm phong
+            Code Cơm giúp nhân viên y tế chuyển báo cáo sự cố tới người thẩm định độc lập. Nội dung được niêm phong
             ngay trên thiết bị, chỉ đúng người mới mở được.
           </p>
           <div className="cta-row">
@@ -136,7 +136,7 @@ export default function LandingPage() {
       </section>
 
       <footer className="land-foot">
-        <span>© 2026 SafeSignal Escalate · Nguyên mẫu cho RMIT UNLOCKED 2026</span>
+        <span>© 2026 Code Cơm · Nguyên mẫu cho RMIT UNLOCKED 2026</span>
         <span>Chỉ dùng dữ liệu giả lập. Không thay thế quy trình báo cáo sự cố bắt buộc.</span>
       </footer>
     </div>

@@ -7,6 +7,7 @@ const PERMS: { label: string; roles: Role[] }[] = [
   { label: "Gửi báo cáo sự cố", roles: ["reporter"] },
   { label: "Xem danh sách hồ sơ", roles: ["reviewer"] },
   { label: "Đọc nội dung báo cáo", roles: ["reviewer"] },
+  { label: "Ký phê duyệt cấp quyền (cần 3 QT)", roles: ["admin"] },
 ];
 
 function Kpi({ label, value, sub }: { label: string; value: string | number; sub: string }) {
@@ -20,7 +21,7 @@ function Kpi({ label, value, sub }: { label: string; value: string | number; sub
 }
 
 export default function OverviewPage() {
-  const { role, cases, ready, loadSamples } = useDemo();
+  const { role, can, claims, cases, ready, loadSamples } = useDemo();
   const referred = cases.filter((c) => c.status === "REFERRED").length;
   const reviewed = cases.length - referred;
   const rate = cases.length ? Math.round((reviewed / cases.length) * 100) : 0;
@@ -36,6 +37,7 @@ export default function OverviewPage() {
         </div>
         {role === "reporter" && <Link className="btn" href="/dashboard/report"><Icon d={ICONS.pen} />Gửi báo cáo mới</Link>}
         {role === "reviewer" && <Link className="btn" href="/dashboard/review"><Icon d={ICONS.eye} />Mở hàng đợi thẩm định</Link>}
+        {role === "admin" && <Link className="btn" href="/dashboard/admin"><Icon d={ICONS.shield} />Yêu cầu cấp quyền</Link>}
       </section>
 
       <div className="kpis reveal d1">
@@ -68,9 +70,9 @@ export default function OverviewPage() {
         <section className="card">
           <div className="panel-head">
             <h2>Hồ sơ gần đây</h2>
-            {role === "reviewer" && cases.length > 0 && <Link href="/dashboard/review">Xem tất cả</Link>}
+            {can("review") && cases.length > 0 && <Link href="/dashboard/review">Xem tất cả</Link>}
           </div>
-          {role !== "reviewer" ? (
+          {!can("review") ? (
             <div className="locked">
               <span className="role-icon"><Icon d={ICONS.lock} /></span>
               <p className="muted">Danh sách hồ sơ chỉ hiển thị với người thẩm định độc lập.</p>
@@ -112,9 +114,38 @@ export default function OverviewPage() {
               ))}
             </tbody>
           </table>
-          <p className="muted perm-key">BC: người báo cáo · TĐ: người thẩm định · NV: nhân viên khác</p>
+          <p className="muted perm-key">BC: người báo cáo · TĐ: người thẩm định · NV: nhân viên khác · QT: quản trị viên</p>
         </section>
       </div>
+
+      {claims && (
+        <section className="card tide-card reveal d3">
+          <div className="panel-head">
+            <div>
+              <p className="eyebrow">TideCloak · mô phỏng</p>
+              <h2>Phiên đăng nhập</h2>
+            </div>
+            <span className="chip demo"><Icon d={ICONS.check} size={14} /> Token ES256 đã xác minh</span>
+          </div>
+          <dl className="report-meta">
+            <div><dt>Issuer (realm)</dt><dd className="mono">{claims.iss}</dd></div>
+            <div><dt>Client (azp)</dt><dd className="mono">{claims.azp}</dd></div>
+            <div><dt>Người dùng</dt><dd>{claims.preferred_username}</dd></div>
+            <div><dt>Token hết hạn</dt><dd>{new Date(claims.exp * 1000).toLocaleTimeString("vi-VN")}</dd></div>
+          </dl>
+          <h3 className="form-section">Vai trò trong token</h3>
+          <div className="row">
+            {claims.realm_access.roles.map((r) => <span key={r} className="chip mono">{r}</span>)}
+            {Object.entries(claims.resource_access).flatMap(([client, v]) => v.roles.map((r) => <span key={`${client}:${r}`} className="chip mono">{client}: {r}</span>))}
+          </div>
+          <h3 className="form-section">Kiểm tra quyền (authorize)</h3>
+          <div className="row">
+            {([["submit", "Gửi báo cáo"], ["review", "Thẩm định"], ["approve", "Phê duyệt cấp quyền"]] as const).map(([a, label]) => (
+              <span key={a} className={`chip${can(a) ? " on" : ""}`}>{can(a) ? "✓" : "✗"} {label}</span>
+            ))}
+          </div>
+        </section>
+      )}
     </>
   );
 }
