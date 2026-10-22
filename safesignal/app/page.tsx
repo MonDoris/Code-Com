@@ -4,6 +4,11 @@ import { useCallback, type CSSProperties } from 'react'
 import { useTideCloak } from '@tidecloak/nextjs'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
+import rawConfig from '../tidecloak.json'
+
+// tidecloak.json stays "{}" until scripts/init-realm.sh provisions and licenses the realm.
+// Without it the Tide SDK has nothing to log in against, so say so instead of a dead button.
+const configured = Boolean((rawConfig as Record<string, unknown>).realm)
 
 const containerStyle: CSSProperties = {
   minHeight: '100vh',
@@ -56,9 +61,19 @@ export default function LoginPage() {
           <p style={{ color: '#555', marginTop: '0.5rem' }}>
             Sign in with your Tide account. Synthetic prototype data only.
           </p>
-          <button onClick={onLogin} style={buttonStyle}>
-            Log In
-          </button>
+          {configured ? (
+            <button onClick={onLogin} style={buttonStyle}>
+              Log In
+            </button>
+          ) : (
+            <div style={{ marginTop: '1rem', textAlign: 'left', color: '#8a5a00', background: '#fff8e6', padding: '0.75rem', borderRadius: '4px', fontSize: '0.9rem' }}>
+              <strong>TideCloak is not configured yet.</strong> <code>tidecloak.json</code> is empty because the realm
+              has not been provisioned. Run <code>bash scripts/init-realm.sh</code> until it prints
+              &quot;All done&quot;, then restart <code>npm run dev</code>.
+              <br />
+              <em>Chưa có cấu hình TideCloak: hãy chạy <code>scripts/init-realm.sh</code> thành công trước, rồi khởi động lại app.</em>
+            </div>
+          )}
         </div>
     </div>
   )
