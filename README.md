@@ -58,7 +58,7 @@ Admin credentials live in `.env.tidecloak` (gitignored). Never commit `.env*`, `
 | `npm run build` and type check | **PASS** | Next.js build lists every route; `tsc --noEmit` exits 0 |
 | Protected API routes fail closed without realm config | **PASS** | No token: every route answers 503 (no adapter) or 401 |
 | TideCloak 0.14.41 runs and reaches the Tide network | **PASS** | Linux VM: Keycloak 26.7.5 started; `/` answers 302 to the Tide console; ORK HTTPS 200 |
-| Realm licensing (`setUpTideRealm`) | **BLOCKED** | Windows JVM: `UnsatisfiedLinkError initialize_wallet`. Linux: `InitializeWallet` timeout, then `FinalizeWallet` HTTP 500 twice |
+| Realm licensing (`setUpTideRealm`) | **BLOCKED** | Windows JVM: `UnsatisfiedLinkError initialize_wallet`. Linux: the first call per email times out in `InitializeWallet` (100 s); every retry gets HTTP 500 from `FinalizeWallet`. 6 attempts, 2 emails, 14:03 to 14:50 ICT, all via ork1 (20.167.25.127) |
 | Real Tide login/logout | NOT RUN | Needs a licensed realm |
 | Browser encrypts, server stores only ciphertext | NOT RUN | Needs a licensed realm |
 | Unauthorised decrypt refused, also with stolen ciphertext and policy | NOT RUN | Needs a licensed realm |
