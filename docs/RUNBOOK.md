@@ -23,7 +23,7 @@ Read https://tide.org/legal first. In Git Bash from the repo root:
 ```bash
 SUBSCRIPTION_EMAIL=you@example.com ACCEPT_TIDE_TERMS=yes bash scripts/init-realm.sh
 ```
-Known blocker (2026-10-22, 14:09 ICT): three attempts with the same email failed inside Tide's
+Known blocker (2026-10-22, 14:03 to 14:50 ICT): six attempts with two emails failed inside Tide's
 licensing service. The first timed out in `InitializeWallet`; the next two got HTTP 500 from
 `FinalizeWallet` and surfaced as `TIDE-IDPEXT-VENDOR-KEYGEN_FAILED`. Before each retry, delete the
 half-made realm (`DELETE /admin/realms/safesignal` with a master admin token). If it keeps failing,

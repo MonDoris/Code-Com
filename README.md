@@ -2,8 +2,8 @@
 
 **Sensitive safety evidence, without unilateral access control.** RMIT UNLOCKED 2026 prototype.
 
-> **Status, 2026-10-22 14:15 ICT:** the app builds and TideCloak runs. The Tide-dependent tests have **not** run yet:
-> licensing the realm failed three times inside Tide's licensing service (details below). Nothing in this README
+> **Status, 2026-10-22 14:50 ICT:** the app builds and TideCloak runs. The Tide-dependent tests have **not** run yet:
+> licensing the realm failed six times, with two emails, inside Tide's licensing service (details below). Nothing in this README
 > claims a Tide capability that we have not observed.
 
 ## Project overview (for UNLOCKED judges)
