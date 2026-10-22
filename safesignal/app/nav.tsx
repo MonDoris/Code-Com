@@ -6,7 +6,7 @@ export function Nav() {
   const { logout, getValueFromIdToken, authenticated } = useTideCloak();
   return (
     <nav>
-      <strong>SafeSignal Escalate</strong>
+      <strong>Code Cơm</strong>
       <Link href="/home">Home</Link>
       <Link href="/report">Report</Link>
       <Link href="/review">Review</Link>

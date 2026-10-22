@@ -22,7 +22,7 @@ type Screen = (typeof SCREENS)[number][0];
 
 function PreviewBanner() {
   return (
-    <p className="banner" style={{ borderLeftColor: "#b3261e", background: "#fdecea" }}>
+    <p className="banner danger">
       <strong>UI PREVIEW ONLY.</strong> Static sample data. No Tide, no encryption, no login, no authorization.
       This is not evidence that any security feature works.
       <br />
@@ -38,7 +38,7 @@ export default function PreviewPage() {
   return (
     <main>
       <nav>
-        <strong>SafeSignal Escalate</strong>
+        <strong>Code Cơm</strong>
         <span className="muted">UI preview</span>
         <Link href="/">Back to login</Link>
       </nav>

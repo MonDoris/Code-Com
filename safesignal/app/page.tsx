@@ -1,46 +1,17 @@
 'use client'
 
-import { useCallback, type CSSProperties } from 'react'
+import { useCallback, useEffect } from 'react'
+import Link from 'next/link'
 import { useTideCloak } from '@tidecloak/nextjs'
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { Icon, ICONS } from '@/lib/demo/icons'
 import rawConfig from '../tidecloak.json'
 
-// tidecloak.json stays "{}" until scripts/init-realm.sh provisions and licenses the realm.
-// Without it the Tide SDK has nothing to log in against, so say so instead of a dead button.
+// tidecloak.json stays "{}" until scripts/init-realm.sh provisions and licenses the realm
+// (see docs/RUNBOOK.md). Until then the layout mounts no Tide provider and only the demo is offered.
 const configured = Boolean((rawConfig as Record<string, unknown>).realm)
 
-const containerStyle: CSSProperties = {
-  minHeight: '100vh',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  background: '#f5f5f5',
-  margin: 0,
-}
-
-const cardStyle: CSSProperties = {
-  background: '#fff',
-  padding: '2rem',
-  borderRadius: '8px',
-  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-  textAlign: 'center',
-  maxWidth: '360px',
-  width: '100%',
-}
-
-const buttonStyle: CSSProperties = {
-  marginTop: '1rem',
-  padding: '0.75rem 1.5rem',
-  fontSize: '1rem',
-  borderRadius: '4px',
-  border: 'none',
-  background: '#0070f3',
-  color: '#fff',
-  cursor: 'pointer',
-}
-
-export default function LoginPage() {
+function TideLogin() {
   const { login, authenticated } = useTideCloak()
   const router = useRouter()
 
@@ -54,29 +25,120 @@ export default function LoginPage() {
     }
   }, [authenticated])
 
+  return <button className="secondary" onClick={onLogin}>Đăng nhập bằng Tide</button>
+}
+
+const STEPS = [
+  { title: 'Báo cáo', body: 'Nhân viên ghi lại sự cố suýt xảy ra ngay khi còn nhớ rõ chi tiết.', icon: ICONS.pen },
+  { title: 'Niêm phong', body: 'Nội dung được mã hóa ngay trên trình duyệt trước khi lưu. Nơi lưu trữ chỉ thấy bản mã.', icon: ICONS.lock },
+  { title: 'Thẩm định', body: 'Chỉ người thẩm định độc lập mở được nội dung và theo dõi xử lý.', icon: ICONS.eye },
+]
+
+const FEATURES = [
+  { title: 'Mã hóa tại trình duyệt', body: 'Mỗi báo cáo có khóa AES-256 riêng, được bọc bằng khóa của người thẩm định.', icon: ICONS.lock },
+  { title: 'Phân quyền rõ ràng', body: 'Người báo cáo chỉ gửi được, người thẩm định chỉ đọc được, nhân viên khác không thấy gì.', icon: ICONS.users },
+  { title: 'Thẩm định độc lập', body: 'Thiết kế cho TideCloak: quyền thẩm định chỉ được cấp khi nhóm quản trị cùng phê duyệt.', icon: ICONS.shield },
+  { title: 'Dữ liệu tối thiểu', body: 'Danh sách hồ sơ chỉ gồm mã, thời gian và trạng thái. Không lưu danh tính người báo cáo.', icon: ICONS.list },
+]
+
+export default function LandingPage() {
   return (
-    <div style={containerStyle}>
-        <div style={cardStyle}>
-          <h1 style={{ margin: 0, fontSize: "1.5rem" }}>SafeSignal Escalate</h1>
-          <p style={{ color: '#555', marginTop: '0.5rem' }}>
-            Sign in with your Tide account. Synthetic prototype data only.
+    <div className="landing">
+      <nav className="reveal">
+        <strong>Code Cơm</strong>
+        <a href="#quy-trinh">Quy trình</a>
+        <a href="#tinh-nang">Tính năng</a>
+        <Link className="btn" href="/login">Đăng nhập</Link>
+      </nav>
+
+      <section className="land-hero">
+        <div className="reveal d1">
+          <p className="eyebrow">RMIT UNLOCKED 2026</p>
+          <h1>
+            Lên tiếng về sự cố suýt xảy ra, <span className="accent">an toàn</span>.
+          </h1>
+          <p className="lede">
+            SafeSignal giúp nhân viên y tế chuyển báo cáo sự cố tới người thẩm định độc lập. Nội dung được niêm phong
+            ngay trên thiết bị, chỉ đúng người mới mở được.
           </p>
-          {configured ? (
-            <button onClick={onLogin} style={buttonStyle}>
-              Log In
-            </button>
-          ) : (
-            <div style={{ marginTop: '1rem', textAlign: 'left', color: '#8a5a00', background: '#fff8e6', padding: '0.75rem', borderRadius: '4px', fontSize: '0.9rem' }}>
-              <strong>TideCloak is not configured yet.</strong> <code>tidecloak.json</code> is empty because the realm
-              has not been provisioned. Run <code>bash scripts/init-realm.sh</code> until it prints
-              &quot;All done&quot;, then restart <code>npm run dev</code>.
-              <br />
-              <em>Chưa có cấu hình TideCloak: hãy chạy <code>scripts/init-realm.sh</code> thành công trước, rồi khởi động lại app.</em>
-              <br />
-              <a href="/preview">UI preview with static sample data (no Tide, no security) / Xem trước giao diện</a>
-            </div>
-          )}
+          <div className="cta-row">
+            <Link className="btn lg" href="/dashboard">
+              Vào ứng dụng <Icon d={ICONS.arrow} />
+            </Link>
+            <a className="btn lg secondary" href="#quy-trinh">Xem quy trình</a>
+            {configured && <TideLogin />}
+          </div>
         </div>
+
+        <div className="hero-art reveal d2" aria-hidden="true">
+          <div className="art-card plain">
+            <p className="art-tag">Báo cáo · Khoa 7</p>
+            <p className="art-text">Hai hộp thuốc có nhãn gần giống hệt nhau được để cạnh nhau. Một đồng nghiệp suýt lấy nhầm…</p>
+            <div className="art-lines"><span style={{ width: '92%' }} /><span style={{ width: '78%' }} /><span style={{ width: '64%' }} /></div>
+          </div>
+          <div className="art-lock"><Icon d={ICONS.lock} size={22} /></div>
+          <div className="art-card sealed">
+            <p className="art-tag sealed-tag">Đã niêm phong · AES-256-GCM</p>
+            <p className="mono art-cipher">eyJrIjoiTjVtWkZhcVRxS0xnR0dNQ3VYb2RpUVd0b3BLSm9zN2ZQWkV4ZHB3cUtYb2Z1bmVtQkx2T2lYM2…</p>
+          </div>
+        </div>
+      </section>
+
+      <div className="trust reveal d3">
+        <span><strong>AES-256</strong> mã hóa từng báo cáo</span>
+        <span><strong>3</strong> vai trò tách biệt</span>
+        <span><strong>0</strong> danh tính người báo cáo được lưu</span>
+      </div>
+
+      <section className="section" id="quy-trinh">
+        <div className="section-head">
+          <p className="eyebrow">Quy trình</p>
+          <h2>Ba bước, từ lúc lên tiếng tới khi được xem xét.</h2>
+        </div>
+        <div className="steps-grid">
+          {STEPS.map((s, i) => (
+            <article key={s.title} className="card step-card">
+              <span className="step-num">0{i + 1}</span>
+              <span className="role-icon"><Icon d={s.icon} /></span>
+              <h3>{s.title}</h3>
+              <p className="muted">{s.body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="section" id="tinh-nang">
+        <div className="section-head">
+          <p className="eyebrow">Tính năng</p>
+          <h2>Bảo vệ người lên tiếng ngay từ thiết kế.</h2>
+        </div>
+        <div className="features-grid">
+          {FEATURES.map((f) => (
+            <article key={f.title} className="card feature">
+              <span className="role-icon"><Icon d={f.icon} /></span>
+              <div>
+                <h3>{f.title}</h3>
+                <p className="muted">{f.body}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="cta-band">
+        <div>
+          <h2>Thử ngay luồng báo cáo và thẩm định.</h2>
+          <p className="muted">Đổi vai trò trong ứng dụng để thấy mỗi người được làm gì.</p>
+        </div>
+        <Link className="btn lg" href="/dashboard">
+          Vào ứng dụng <Icon d={ICONS.arrow} />
+        </Link>
+      </section>
+
+      <footer className="land-foot">
+        <span>© 2026 SafeSignal Escalate · Nguyên mẫu cho RMIT UNLOCKED 2026</span>
+        <span>Chỉ dùng dữ liệu giả lập. Không thay thế quy trình báo cáo sự cố bắt buộc.</span>
+      </footer>
     </div>
   )
 }
