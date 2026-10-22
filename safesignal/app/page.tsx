@@ -72,6 +72,8 @@ export default function LoginPage() {
               &quot;All done&quot;, then restart <code>npm run dev</code>.
               <br />
               <em>Chưa có cấu hình TideCloak: hãy chạy <code>scripts/init-realm.sh</code> thành công trước, rồi khởi động lại app.</em>
+              <br />
+              <a href="/preview">UI preview with static sample data (no Tide, no security) / Xem trước giao diện</a>
             </div>
           )}
         </div>
