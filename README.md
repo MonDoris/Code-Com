@@ -8,7 +8,7 @@
 
 ## Project overview (for UNLOCKED judges)
 
-**Vision & originality.** Hospitals already collect incident reports. SafeSignal Escalate targets a different trust boundary: referring a confidential, unresolved near-miss for independent review, so that no single IT administrator can quietly read it or grant someone else access.
+**Vision & originality.** Hospitals already collect incident reports. SafeSignal Escalate will target a different trust boundary: referring a confidential, unresolved near-miss for independent review, so that no single IT administrator can quietly read it or grant someone else access.
 
 **Trust constraint.** Frontline staff fear identification and punishment. In a 2026 *BMJ Open Quality* survey of one South Indian hospital, 40% of responding nurses were concerned about identity tracking and 36% about punitive action. That shows a reporting barrier; it does not prove that software removes it.
 
