@@ -1,4 +1,4 @@
-# Code Cơm
+# CodeCom
 
 **Sensitive safety evidence, without unilateral access control.** RMIT UNLOCKED 2026 prototype.
 
